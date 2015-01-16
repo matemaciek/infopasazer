@@ -8,7 +8,7 @@ Intercity ma taką jedną stronę: http://infopasazer.intercity.pl/ . Fajną. Po
 HOWTO:
 
 * na http://rozklad-pkp.pl/ znajdujemy interesujący nas pociąg, kopiujemy do niego url, może wyglądać np. tak: http://rozklad-pkp.pl/pl/ti?trainlink=2151/173411/665730/332148/55 (plus trochę śmieci dalej, okazuje się, że można je uciąć, a link dalej działa. Można nie ucinać, nic nie szkodzi, ale wygląda brzydziej.)
-* odpalamy skrypt: `./downloader.sh "http://rozklad-pkp.pl/pl/ti?trainlink=2151/173411/665730/332148/55"`
+* odpalamy skrypt: `python infopasazer.py "http://rozklad-pkp.pl/pl/ti?trainlink=2151/173411/665730/332148/55"`
 * skrypt powinien wypisać coś w rodzaju:
 ```
 None/11:36:00, Szczecin Główny: Pociągu nie ma na tablicy.

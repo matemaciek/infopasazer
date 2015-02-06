@@ -115,18 +115,22 @@ for station in data:
   url = 'http://infopasazer.intercity.pl/index_set.php?stacja='+station['name'].replace(' ', '%20')
   station_search_html = subprocess.check_output(['curl', url])
   parser.feed(station_search_html)
-  station['url'] = 'http://infopasazer.intercity.pl/'+parser.url
-  station_html = subprocess.check_output(['curl', station['url']])
-  parser = InfopasazerStationParser()
-  parser.feed(station_html)
-  station['arrivals'] = parser.przyjazdy
-  station['departures'] = parser.odjazdy
+  if parser.url is not None:
+    station['url'] = 'http://infopasazer.intercity.pl/'+parser.url
+    station_html = subprocess.check_output(['curl', station['url']])
+    parser = InfopasazerStationParser()
+    parser.feed(station_html)
+    station['arrivals'] = parser.przyjazdy
+    station['departures'] = parser.odjazdy
 
 for station in data:
-  in_a = station['arrival'] in station['arrivals']
-  in_d = station['departure'] in station['departures']
   station_id = u"{0}/{1}, {2}".format(station['arrival'], station['departure'], station['name'])
-  if (not in_a) and (not in_d):
-    print u"{0}: Pociągu nie ma na tablicy.".format(station_id)
-  else:
-    print u"{0}: Pociąg jest na tablicy: {1} ({2}, {3})".format(station_id, station['url'], in_a, in_d)
+  try:
+    in_a = station['arrival'] in station['arrivals']
+    in_d = station['departure'] in station['departures']
+    if (not in_a) and (not in_d):
+      print u"{0}: Pociągu nie ma na tablicy.".format(station_id)
+    else:
+      print u"{0}: Pociąg jest na tablicy: {1} ({2}, {3})".format(station_id, station['url'], in_a, in_d)
+  except KeyError:
+    print u"{0}: Nie znaleziono tablicy.".format(station_id)

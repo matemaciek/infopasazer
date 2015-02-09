@@ -2,6 +2,7 @@
 import fileinput
 import subprocess
 import datetime
+import os
 import sys
 from HTMLParser import HTMLParser
 
@@ -79,6 +80,7 @@ class InfopasazerStationParser(HTMLParser):
     self.odjazdy = []
     self.przyjazdy = []
     self.current = self.przyjazdy
+    self.train = None
   def handle_starttag(self, tag, attrs):
     if tag == 'td':
       self.inatag = True
@@ -87,12 +89,13 @@ class InfopasazerStationParser(HTMLParser):
       self.inatag = False
   def handle_data(self, data):
     udata = data.decode('utf-8')
-    if self.inatag and ':' in data:
-      train = parsetime(udata.strip())
-      if train is not None:
-        if len(self.current) > 0 and train < self.current[-1]:
+    if self.inatag and 'min' in data:
+      if self.train is not None:
+        if len(self.current) > 0 and self.train < self.current[-1][0]:
           self.current = self.odjazdy
-        self.current.append(train)
+        self.current.append((self.train,udata))
+    if self.inatag and ':' in data:
+      self.train = parsetime(udata.strip())
 
 def parsetime(data):
   splitted = data.strip().split(':')
@@ -110,22 +113,26 @@ parser.feed(rozklad_html)
 
 data = parser.data
 
+FNULL = open(os.devnull, 'w')
+
 for station in data:
   parser = InfopasazerStationSearchParser(station)
   url = 'http://infopasazer.intercity.pl/index_set.php?stacja='+station['name'].replace(' ', '%20')
-  station_search_html = subprocess.check_output(['curl', url])
+  station_search_html = subprocess.check_output(['curl', url], stderr=FNULL)
   parser.feed(station_search_html)
   station_id = u"{0}/{1}, {2}".format(station['arrival'], station['departure'], station['name'])
   if parser.url is not None:
     station['url'] = 'http://infopasazer.intercity.pl/'+parser.url
-    station_html = subprocess.check_output(['curl', station['url']])
+    station_html = subprocess.check_output(['curl', station['url']], stderr=FNULL)
     parser = InfopasazerStationParser()
     parser.feed(station_html)
-    in_a = station['arrival'] in parser.przyjazdy
-    in_d = station['departure'] in parser.odjazdy
-    if (not in_a) and (not in_d):
+    przyjazd = [b for (a, b) in parser.przyjazdy if a == station['arrival']]
+    odjazd = [b for (a, b) in parser.odjazdy if a == station['departure']]
+    op_przyj = przyjazd[0] if len(przyjazd) > 0 else None
+    op_odj = odjazd[0] if len(odjazd) > 0 else None
+    if (op_przyj is None) and (op_odj is None):
       print u"{0}: Pociągu nie ma na tablicy.".format(station_id)
     else:
-      print u"{0}: Pociąg jest na tablicy: {1} ({2}, {3})".format(station_id, station['url'], in_a, in_d)
+      print u"{0} ({2}/{3}): Pociąg jest na tablicy: {1}".format(station_id, station['url'], op_przyj, op_odj)
   else:
     print u"{0}: Nie znaleziono tablicy.".format(station_id)
